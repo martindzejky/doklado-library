@@ -1,0 +1,46 @@
+---
+description: Agent context and workflow
+alwaysApply: true
+---
+
+# Doklado Library Project Basics
+
+**Read `README.md` first** for setup and usage.
+If docs and code disagree, trust code and update docs in the same change.
+If anything is unclear or instructions conflict, STOP and ask.
+
+## Project Purpose
+
+- This repo is a Node.js TypeScript package named `@martindzejky/doklado-library`.
+- It provides both:
+  - an importable SDK for the Doklado API
+  - a CLI tool `doklado`
+
+## Build and Runtime Conventions
+
+- Keep setup minimal and modern:
+  - ESM-only package
+  - Node `>=24`
+  - pnpm
+- Keep CLI IDs positional for commands that require ID input.
+
+## Coding Style
+
+- Prefer simple, boring implementations over abstractions.
+- Keep configuration and scripts minimal.
+- Use dash-case filenames.
+- Keep text mode and JSON mode behavior stable unless user asks to change.
+- Prefer manual verification flows in this repo unless tests are explicitly requested.
+- Always write valid and safe Typescript.
+- Do not use `any`, instead use `unknown` and proper type guards.
+- Do not cast randomly between types, use proper types.
+- Do not cast like `as unknown as Type`, this is invalid forced type changing.
+- Prefer explicit `if`-based object construction over conditional object spreading for readability.
+
+## Code and verification
+
+After you finish, run `pnpm format` when relevant.
+Write simple, minimal code.
+Prefer existing patterns.
+Do not add unrequested features or APIs.
+Store temporary artifacts in `tmp/`, not the repo root.
