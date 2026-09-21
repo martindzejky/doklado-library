@@ -1,4 +1,4 @@
-# @martindzejky/doklado-library
+# doklado-library
 
 TypeScript SDK and CLI for [Doklado](https://doklado.com/sk). Setup only for now.
 

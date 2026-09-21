@@ -24,6 +24,16 @@ If anything is unclear or instructions conflict, STOP and ask.
   - pnpm
 - Keep CLI IDs positional for commands that require ID input.
 
+## Project Structure
+
+- Implementation lives under `src`.
+- Library entry is `src/index.ts`.
+
+## Git hooks
+
+`lefthook` runs `pnpm typecheck`, `pnpm lint`, and `pnpm format` on `git push`.
+Install hooks via `pnpm install` (the `prepare` script runs `lefthook install`).
+
 ## Coding Style
 
 - Prefer simple, boring implementations over abstractions.
@@ -39,8 +49,21 @@ If anything is unclear or instructions conflict, STOP and ask.
 
 ## Code and verification
 
-After you finish, run `pnpm format` when relevant.
+After you finish, run `pnpm fix`, `pnpm typecheck`, and `pnpm build` when relevant.
 Write simple, minimal code.
 Prefer existing patterns.
 Do not add unrequested features or APIs.
 Store temporary artifacts in `tmp/`, not the repo root.
+
+## Releases
+
+GitHub Actions publishes this package to npm from version tags. Do not publish from your machine.
+
+On `master`:
+
+```sh
+pnpm version patch
+git push origin master --follow-tags
+```
+
+Standard `v*.*.*` tags only. Do not add `registry-url` to `setup-node` in the publish workflow. That breaks OIDC trusted publishing.

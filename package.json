@@ -7,8 +7,29 @@
     "node": ">=24"
   },
   "scripts": {
+    "prepare": "lefthook install || true",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "format": "prettier --check .",
-    "format:fix": "prettier --write ."
+    "format:fix": "prettier --write .",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix .",
+    "fix": "pnpm format:fix; pnpm lint:fix",
+    "prepublishOnly": "pnpm run build"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
   "keywords": [
     "doklado",
@@ -30,7 +51,25 @@
     "access": "public"
   },
   "packageManager": "pnpm@10.34.5",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lefthook"
+    ]
+  },
   "devDependencies": {
-    "prettier": "^3.9.8"
+    "@eslint/compat": "^2.0.5",
+    "@eslint/js": "^9.39.2",
+    "@microsoft/api-extractor": "^7.59.1",
+    "@types/node": "^26.6.1",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
+    "lefthook": "^1.11.14",
+    "prettier": "^3.9.8",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.3.0",
+    "vite-plugin-dts": "^5.1.0"
   }
 }
