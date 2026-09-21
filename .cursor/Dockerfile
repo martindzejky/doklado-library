@@ -68,6 +68,26 @@ RUN chown -R ubuntu:ubuntu /home/ubuntu
 RUN ln -s /home/ubuntu/.cursor /.cursor
 
 ########################################################
+# NODE PATH (ahead of Cursor exec-daemon Node 22)
+########################################################
+
+RUN printf '%s\n' \
+    '# Prepend nvm Node 24 ahead of Cursor exec-daemon Node 22.' \
+    'export NVM_DIR="${NVM_DIR:-/home/ubuntu/.nvm}"' \
+    'if [ -s "$NVM_DIR/nvm.sh" ]; then' \
+    '  . "$NVM_DIR/nvm.sh"' \
+    '  nvm use 24 >/dev/null 2>&1 || true' \
+    '  _ver="$(nvm version 24 2>/dev/null)"' \
+    '  if [ -n "$_ver" ] && [ "$_ver" != "N/A" ] && [ -d "$NVM_DIR/versions/node/$_ver/bin" ]; then' \
+    '    export PATH="$NVM_DIR/versions/node/$_ver/bin:$PATH"' \
+    '  fi' \
+    '  unset _ver' \
+    'fi' \
+    > /etc/profile.d/node-path.sh
+
+ENV BASH_ENV=/etc/profile.d/node-path.sh
+
+########################################################
 # SET USER
 ########################################################
 
