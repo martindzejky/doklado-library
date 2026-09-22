@@ -545,6 +545,33 @@ describe('doklado cli', () => {
       });
       assert.equal(notObject.status, 1);
       assert.match(notObject.stderr, /must be an object/);
+
+      const requestCount = stub.requests.length;
+      const invalidInvoice = await run(
+        [
+          '--output',
+          'json',
+          'invoices',
+          'create',
+          '--data',
+          '{"type":"issued_invoice","customer":{},"items":[{"name":"Work","unitPriceWithoutVat":10,"quantity":"1"}]}',
+        ],
+        {
+          cwd,
+          env: env({
+            DOKLADO_API_KEY: secret,
+            DOKLADO_API_URL: stub.baseUrl,
+            DOKLADO_ORGANIZATION_ID: '12345678',
+          }),
+        },
+      );
+      assert.equal(invalidInvoice.status, 1);
+      assert.equal(invalidInvoice.stdout, '');
+      const invalid: unknown = JSON.parse(invalidInvoice.stderr);
+      assert.ok(isRecord(invalid) && isRecord(invalid.error));
+      assert.equal(invalid.error.name, 'InputError');
+      assert.match(String(invalid.error.message), /quantity/);
+      assert.equal(stub.requests.length, requestCount);
     } finally {
       await stub.close();
     }

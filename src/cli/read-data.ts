@@ -1,33 +1,11 @@
 import { readFile } from 'node:fs/promises';
-import { isRecord } from '../record.ts';
+import { text as readStream } from 'node:stream/consumers';
+import { parseInvoiceInput } from '../invoice-body.ts';
 import type { CreateInvoiceInput } from '../types.ts';
-
-function isInvoiceInput(value: unknown): value is CreateInvoiceInput {
-  return isRecord(value);
-}
-
-function readStdin(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-
-    process.stdin.on('data', (chunk: Buffer | string) => {
-      if (typeof chunk === 'string') {
-        chunks.push(Buffer.from(chunk));
-        return;
-      }
-
-      chunks.push(chunk);
-    });
-    process.stdin.on('end', () => {
-      resolve(Buffer.concat(chunks).toString('utf8'));
-    });
-    process.stdin.on('error', reject);
-  });
-}
 
 async function readInvoiceText(source: string): Promise<string> {
   if (source === '-') {
-    return readStdin();
+    return readStream(process.stdin);
   }
 
   if (source.startsWith('@')) {
@@ -51,9 +29,5 @@ export async function readInvoiceInput(
     throw new Error(`Invoice JSON is not valid JSON. ${detail}`);
   }
 
-  if (!isInvoiceInput(parsed)) {
-    throw new Error('Invoice JSON must be an object.');
-  }
-
-  return parsed;
+  return parseInvoiceInput(parsed);
 }

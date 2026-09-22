@@ -23,16 +23,17 @@ function isExternal(id: string): boolean {
 }
 
 export default defineConfig({
+  define: {
+    __PACKAGE_VERSION__: JSON.stringify(packageJson.version),
+  },
   plugins: [
     dts({
       include: ['src/**/*.ts'],
-      exclude: ['src/cli/**/*.ts'],
       tsconfigPath: './tsconfig.json',
       bundleTypes: true,
     }),
   ],
   build: {
-    emptyOutDir: true,
     lib: {
       entry: {
         index: resolve(rootDir, 'src/index.ts'),
