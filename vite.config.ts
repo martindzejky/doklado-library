@@ -1,7 +1,6 @@
-import { rmSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { resolve } from 'node:path';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import packageJson from './package.json' with { type: 'json' };
 
@@ -23,16 +22,6 @@ function isExternal(id: string): boolean {
   );
 }
 
-function omitCliDeclarations(): Plugin {
-  return {
-    name: 'omit-cli-declarations',
-    apply: 'build',
-    closeBundle() {
-      rmSync(resolve(rootDir, 'dist/cli.d.ts'), { force: true });
-    },
-  };
-}
-
 export default defineConfig({
   plugins: [
     dts({
@@ -41,7 +30,6 @@ export default defineConfig({
       tsconfigPath: './tsconfig.json',
       bundleTypes: true,
     }),
-    omitCliDeclarations(),
   ],
   build: {
     emptyOutDir: true,
@@ -55,9 +43,6 @@ export default defineConfig({
     },
     rollupOptions: {
       external: isExternal,
-      output: {
-        chunkFileNames: 'shared.js',
-      },
     },
     sourcemap: true,
     target: 'node24',

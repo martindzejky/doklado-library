@@ -112,15 +112,19 @@ describe('packed package', () => {
     assert.ok(sdkUrl?.includes('/tmp/pack-consumer/'));
     assert.ok(commanderUrl?.includes('/tmp/pack-consumer/'));
     assert.ok(dotenvUrl?.includes('/tmp/pack-consumer/'));
-    const distFiles = readdirSync(join(installedRoot, 'dist'));
-    assert.deepEqual(distFiles.sort(), [
+    const distFiles = readdirSync(join(installedRoot, 'dist')).sort();
+    const entries = [
+      'cli.d.ts',
       'cli.js',
       'cli.js.map',
       'index.d.ts',
       'index.js',
-      'shared.js',
-      'shared.js.map',
-    ]);
+    ];
+    const chunk = distFiles.find(
+      (name) => name.startsWith('src-') && name.endsWith('.js'),
+    );
+    assert.ok(chunk);
+    assert.deepEqual(distFiles, [...entries, chunk, `${chunk}.map`].sort());
 
     for (const name of [
       'vite',
