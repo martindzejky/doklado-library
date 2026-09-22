@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, test } from 'node:test';
 import { Buffer } from 'node:buffer';
+import packageJson from '../package.json' with { type: 'json' };
 import { isRecord } from '../src/record.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -215,7 +216,7 @@ describe('doklado cli', () => {
 
     const version = await run(['--version'], { cwd, env: env({}) });
     assert.equal(version.status, 0, version.stderr);
-    assert.match(version.stdout, /0\.0\.0/);
+    assert.equal(version.stdout.trim(), packageJson.version);
   });
 
   test('fails with a nonzero status for usage errors', async () => {
