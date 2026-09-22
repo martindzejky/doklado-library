@@ -8,7 +8,8 @@
   },
   "scripts": {
     "prepare": "lefthook install || true",
-    "build": "vite build",
+    "build": "vite build && DOKLADO_ENTRY=cli vite build",
+    "pretest": "pnpm build",
     "test": "node --test test/*.test.ts test/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "format": "prettier --check .",
@@ -18,7 +19,11 @@
     "fix": "pnpm format:fix; pnpm lint:fix",
     "prepublishOnly": "pnpm run build"
   },
+  "bin": {
+    "doklado": "./bin/doklado.js"
+  },
   "files": [
+    "bin",
     "dist",
     "README.md",
     "LICENSE"
@@ -72,5 +77,9 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^8.3.0",
     "vite-plugin-dts": "^5.1.0"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "dotenv": "^18.0.2"
   }
 }

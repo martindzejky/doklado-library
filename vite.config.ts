@@ -22,26 +22,34 @@ function isExternal(id: string): boolean {
   );
 }
 
-export default defineConfig({
-  plugins: [
-    dts({
-      include: ['src/**/*.ts'],
-      tsconfigPath: './tsconfig.json',
-      bundleTypes: true,
-    }),
-  ],
-  build: {
-    lib: {
-      entry: {
-        index: resolve(rootDir, 'src/index.ts'),
+export default defineConfig(() => {
+  const cli = process.env.DOKLADO_ENTRY === 'cli';
+
+  return {
+    plugins: cli
+      ? []
+      : [
+          dts({
+            include: ['src/**/*.ts'],
+            exclude: ['src/cli/**/*.ts'],
+            tsconfigPath: './tsconfig.json',
+            bundleTypes: true,
+          }),
+        ],
+    build: {
+      emptyOutDir: !cli,
+      lib: {
+        entry: cli
+          ? { cli: resolve(rootDir, 'src/cli/main.ts') }
+          : { index: resolve(rootDir, 'src/index.ts') },
+        formats: ['es'],
+        fileName: (_format, entryName) => `${entryName}.js`,
       },
-      formats: ['es'],
-      fileName: (_format, entryName) => `${entryName}.js`,
+      rollupOptions: {
+        external: isExternal,
+      },
+      sourcemap: true,
+      target: 'node24',
     },
-    rollupOptions: {
-      external: isExternal,
-    },
-    sourcemap: true,
-    target: 'node24',
-  },
+  };
 });
