@@ -1,6 +1,6 @@
 {
   "name": "@martindzejky/doklado-library",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple library and CLI for working with the Doklado API.",
   "type": "module",
   "engines": {
