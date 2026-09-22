@@ -1,6 +1,6 @@
 # doklado-library
 
-TypeScript SDK and CLI for [Doklado](https://doklado.com/sk). Setup only for now.
+TypeScript SDK for [Doklado](https://doklado.com/sk).
 
 ## Requirements
 
