@@ -8,7 +8,7 @@
   },
   "scripts": {
     "prepare": "lefthook install || true",
-    "build": "vite build && DOKLADO_ENTRY=cli vite build",
+    "build": "vite build",
     "pretest": "pnpm build",
     "test": "node --test test/*.test.ts test/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",

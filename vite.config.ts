@@ -1,6 +1,7 @@
+import { rmSync } from 'node:fs';
 import { builtinModules } from 'node:module';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import dts from 'vite-plugin-dts';
 import packageJson from './package.json' with { type: 'json' };
 
@@ -22,34 +23,43 @@ function isExternal(id: string): boolean {
   );
 }
 
-export default defineConfig(() => {
-  const cli = process.env.DOKLADO_ENTRY === 'cli';
-
+function omitCliDeclarations(): Plugin {
   return {
-    plugins: cli
-      ? []
-      : [
-          dts({
-            include: ['src/**/*.ts'],
-            exclude: ['src/cli/**/*.ts'],
-            tsconfigPath: './tsconfig.json',
-            bundleTypes: true,
-          }),
-        ],
-    build: {
-      emptyOutDir: !cli,
-      lib: {
-        entry: cli
-          ? { cli: resolve(rootDir, 'src/cli/main.ts') }
-          : { index: resolve(rootDir, 'src/index.ts') },
-        formats: ['es'],
-        fileName: (_format, entryName) => `${entryName}.js`,
-      },
-      rollupOptions: {
-        external: isExternal,
-      },
-      sourcemap: true,
-      target: 'node24',
+    name: 'omit-cli-declarations',
+    apply: 'build',
+    closeBundle() {
+      rmSync(resolve(rootDir, 'dist/cli.d.ts'), { force: true });
     },
   };
+}
+
+export default defineConfig({
+  plugins: [
+    dts({
+      include: ['src/**/*.ts'],
+      exclude: ['src/cli/**/*.ts'],
+      tsconfigPath: './tsconfig.json',
+      bundleTypes: true,
+    }),
+    omitCliDeclarations(),
+  ],
+  build: {
+    emptyOutDir: true,
+    lib: {
+      entry: {
+        index: resolve(rootDir, 'src/index.ts'),
+        cli: resolve(rootDir, 'src/cli/main.ts'),
+      },
+      formats: ['es'],
+      fileName: (_format, entryName) => `${entryName}.js`,
+    },
+    rollupOptions: {
+      external: isExternal,
+      output: {
+        chunkFileNames: 'shared.js',
+      },
+    },
+    sourcemap: true,
+    target: 'node24',
+  },
 });

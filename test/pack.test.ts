@@ -118,7 +118,8 @@ describe('packed package', () => {
       'cli.js.map',
       'index.d.ts',
       'index.js',
-      'index.js.map',
+      'shared.js',
+      'shared.js.map',
     ]);
 
     for (const name of [
