@@ -26,14 +26,17 @@ export default defineConfig({
   plugins: [
     dts({
       include: ['src/**/*.ts'],
+      exclude: ['src/cli/**/*.ts'],
       tsconfigPath: './tsconfig.json',
       bundleTypes: true,
     }),
   ],
   build: {
+    emptyOutDir: true,
     lib: {
       entry: {
         index: resolve(rootDir, 'src/index.ts'),
+        cli: resolve(rootDir, 'src/cli/main.ts'),
       },
       formats: ['es'],
       fileName: (_format, entryName) => `${entryName}.js`,
