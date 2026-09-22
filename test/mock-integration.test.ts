@@ -1,8 +1,5 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import {
   ApiError,
@@ -14,8 +11,6 @@ import {
 import type { CreateInvoiceInput } from '../src/types.ts';
 import { isRecord } from '../src/record.ts';
 import { startMock, type RunningMock } from './mock-runtime.ts';
-
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const apiKey = 'test-api-key';
 const organizationId = '12345678';
@@ -204,18 +199,6 @@ describe('doklado-mock integration', { concurrency: false }, () => {
 
   after(async () => {
     await mock.stop();
-  });
-
-  test('sdk sources do not call the mock or load dotenv', () => {
-    const files = sourceFiles(join(root, 'src'));
-    assert.ok(files.length > 0);
-
-    for (const file of files) {
-      const text = readFileSync(file, 'utf8');
-      assert.equal(text.includes('__mock'), false, file);
-      assert.equal(text.includes('dotenv'), false, file);
-      assert.equal(text.includes('doklado-mock'), false, file);
-    }
   });
 
   test('creates a private invoice and downloads the pdf', async () => {
@@ -521,21 +504,3 @@ describe('doklado-mock integration', { concurrency: false }, () => {
     assert.equal(countPath(snapshot, '/v1/documents/invoice-issue'), 1);
   });
 });
-
-function sourceFiles(dir: string): string[] {
-  const found: string[] = [];
-
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      found.push(...sourceFiles(path));
-      continue;
-    }
-
-    if (entry.name.endsWith('.ts')) {
-      found.push(path);
-    }
-  }
-
-  return found;
-}

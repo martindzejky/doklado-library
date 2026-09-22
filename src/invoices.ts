@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { InputError, ResponseError } from './errors.ts';
-import { buildIssueData } from './invoice-body.ts';
+import { parseInvoiceInput } from './invoice-body.ts';
 import type { HttpClient } from './http.ts';
 import { isRecord } from './record.ts';
 import type {
@@ -153,7 +153,8 @@ export async function createInvoice(
     context.organizationId,
     input.organizationId,
   );
-  const data = buildIssueData(input, organizationId);
+  const data = parseInvoiceInput(input);
+  data.organizationId = organizationId;
   const response = await context.http.post(
     '/v1/documents/invoice-issue',
     data,

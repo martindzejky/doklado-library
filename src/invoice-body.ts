@@ -3,6 +3,11 @@ import { isRecord } from './record.ts';
 import {
   INVOICE_TYPES,
   PAYMENT_TYPES,
+  type CreateInvoiceInput,
+  type InvoiceCustomer,
+  type InvoiceItem,
+  type InvoicePaymentInfo,
+  type InvoiceAccountingSettings,
   type InvoiceType,
   type PaymentType,
 } from './types.ts';
@@ -65,10 +70,10 @@ function isPaymentType(value: unknown): value is PaymentType {
   return false;
 }
 
-function put(
-  target: Record<string, unknown>,
-  key: string,
-  value: unknown,
+function put<T, K extends keyof T>(
+  target: T,
+  key: K,
+  value: T[K] | undefined,
 ): void {
   if (value !== undefined) {
     target[key] = value;
@@ -152,12 +157,12 @@ function requireNumber(value: unknown, label: string): number {
   return value;
 }
 
-function buildCustomer(value: unknown): Record<string, unknown> {
+function buildCustomer(value: unknown): InvoiceCustomer {
   if (!isRecord(value)) {
     throw new InputError('customer must be an object.');
   }
 
-  const customer: Record<string, unknown> = {};
+  const customer: InvoiceCustomer = {};
 
   for (const key of CUSTOMER_STRING_FIELDS) {
     put(customer, key, optionalString(value, key, `customer.${key}`));
@@ -170,12 +175,12 @@ function buildCustomer(value: unknown): Record<string, unknown> {
   return customer;
 }
 
-function buildItem(value: unknown, index: number): Record<string, unknown> {
+function buildItem(value: unknown, index: number): InvoiceItem {
   if (!isRecord(value)) {
     throw new InputError(`items[${index}] must be an object.`);
   }
 
-  const item: Record<string, unknown> = {
+  const item: InvoiceItem = {
     name: requireString(value.name, `items[${index}].name`),
     unitPriceWithoutVat: requireNumber(
       value.unitPriceWithoutVat,
@@ -195,12 +200,12 @@ function buildItem(value: unknown, index: number): Record<string, unknown> {
   return item;
 }
 
-function buildItems(value: unknown): Record<string, unknown>[] {
+function buildItems(value: unknown): InvoiceItem[] {
   if (!Array.isArray(value)) {
     throw new InputError('items must be an array.');
   }
 
-  const items: Record<string, unknown>[] = [];
+  const items: InvoiceItem[] = [];
   for (let index = 0; index < value.length; index += 1) {
     items.push(buildItem(value[index], index));
   }
@@ -208,7 +213,7 @@ function buildItems(value: unknown): Record<string, unknown>[] {
   return items;
 }
 
-function buildPaymentInfo(value: unknown): Record<string, unknown> | undefined {
+function buildPaymentInfo(value: unknown): InvoicePaymentInfo | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -217,7 +222,7 @@ function buildPaymentInfo(value: unknown): Record<string, unknown> | undefined {
     throw new InputError('paymentInfo must be an object.');
   }
 
-  const paymentInfo: Record<string, unknown> = {};
+  const paymentInfo: InvoicePaymentInfo = {};
   put(paymentInfo, 'iban', optionalString(value, 'iban', 'paymentInfo.iban'));
   put(
     paymentInfo,
@@ -252,7 +257,7 @@ function readPaymentType(value: unknown): PaymentType | null | undefined {
 
 function buildAccountingSettings(
   value: unknown,
-): Record<string, unknown> | undefined {
+): InvoiceAccountingSettings | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -280,7 +285,7 @@ function buildAccountingSettings(
 
 function assertTransferIban(
   paymentType: PaymentType | null | undefined,
-  paymentInfo: Record<string, unknown> | undefined,
+  paymentInfo: InvoicePaymentInfo | undefined,
 ): void {
   if (paymentType !== 'transfer') {
     return;
@@ -296,10 +301,7 @@ function assertTransferIban(
   );
 }
 
-export function buildIssueData(
-  input: unknown,
-  organizationId: string,
-): Record<string, unknown> {
+export function parseInvoiceInput(input: unknown): CreateInvoiceInput {
   if (!isRecord(input)) {
     throw new InputError('invoice must be an object.');
   }
@@ -314,12 +316,15 @@ export function buildIssueData(
   const paymentInfo = buildPaymentInfo(input.paymentInfo);
   assertTransferIban(paymentType, paymentInfo);
 
-  const data: Record<string, unknown> = {
-    organizationId,
+  const data: CreateInvoiceInput = {
     type: input.type,
     customer: buildCustomer(input.customer),
     items: buildItems(input.items),
   };
+
+  if (input.organizationId !== undefined) {
+    data.organizationId = requireString(input.organizationId, 'organizationId');
+  }
 
   for (const key of INVOICE_STRING_FIELDS) {
     put(data, key, optionalString(input, key, key));
