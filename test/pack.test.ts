@@ -294,7 +294,8 @@ describe('packed package', () => {
         },
       );
       assert.equal(cli.status, 0, cli.stderr);
-      assert.match(cli.stdout, /0\.0\.0/);
+      assert.ok(typeof manifest.version === 'string');
+      assert.equal(cli.stdout.trim(), manifest.version);
 
       writeFileSync(
         join(consumer, 'invoice.json'),
