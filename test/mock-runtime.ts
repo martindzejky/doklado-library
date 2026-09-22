@@ -1,11 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
-import { isRecord } from '../src/record.ts';
-
-export const MOCK_VERSION = '1.0.1';
 
 export type RunningMock = {
   baseUrl: string;
@@ -18,17 +14,6 @@ function installedMock(): { root: string; bin: string } {
   const root = dirname(
     require.resolve('@martindzejky/doklado-mock/package.json'),
   );
-  const parsed: unknown = JSON.parse(
-    readFileSync(join(root, 'package.json'), 'utf8'),
-  );
-
-  if (!isRecord(parsed) || parsed.version !== MOCK_VERSION) {
-    const found =
-      isRecord(parsed) && typeof parsed.version === 'string'
-        ? parsed.version
-        : 'nothing';
-    throw new Error(`Expected doklado-mock ${MOCK_VERSION}, found ${found}.`);
-  }
 
   return {
     root,
