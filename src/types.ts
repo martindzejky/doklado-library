@@ -52,6 +52,7 @@ export type InvoiceCustomer = {
   countryCode?: string | null;
   registerNumberText?: string | null;
   vatRegistrationType?: string | null;
+  contactEmail?: string | null;
 };
 
 export type InvoiceItem = {
@@ -73,6 +74,11 @@ export type InvoicePaymentInfo = {
   variableSymbol?: string | null;
 };
 
+/**
+ * Fields for issuing an ordinary invoice and knowing the customer email
+ * to send the PDF to. Other issue-invoice fields known from the mock
+ * schema are intentionally omitted.
+ */
 export type CreateInvoiceInput = {
   organizationId?: string;
   type: InvoiceType;

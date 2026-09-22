@@ -21,6 +21,7 @@ const CUSTOMER_STRING_FIELDS = [
   'countryCode',
   'registerNumberText',
   'vatRegistrationType',
+  'contactEmail',
 ] as const;
 
 const CUSTOMER_BOOLEAN_FIELDS = ['vatPayer', 'nonCorporateEntity'] as const;

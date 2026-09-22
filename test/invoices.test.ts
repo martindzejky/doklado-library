@@ -134,6 +134,59 @@ describe('invoices.create', () => {
     );
   });
 
+  test('sends customer contact email and omits other issue fields', async () => {
+    const doklado = client();
+    const omitted = [
+      'taxPointDate',
+      'email',
+      'telephoneNumber',
+      'website',
+      'discount',
+      'ossSettings',
+      'deliveryAddress',
+    ] as const;
+
+    await withFetch(
+      () => jsonResponse(200, issued()),
+      async (calls) => {
+        await doklado.invoices.create({
+          ...privateInvoice(),
+          customer: {
+            name: 'Ada Lovelace',
+            nonCorporateEntity: true,
+            country: 'Slovensko',
+            countryCode: 'SK',
+            contactEmail: 'ada@example.com',
+          },
+        });
+        const data = requestData(assertSinglePost(calls, issueUrl));
+        assert.deepEqual(data, {
+          organizationId,
+          type: 'issued_invoice',
+          customer: {
+            name: 'Ada Lovelace',
+            nonCorporateEntity: true,
+            country: 'Slovensko',
+            countryCode: 'SK',
+            contactEmail: 'ada@example.com',
+          },
+          items: [
+            {
+              name: 'Work',
+              unitPriceWithoutVat: 10,
+              quantity: 1,
+              vatRate: 0,
+            },
+          ],
+        });
+        for (const key of omitted) {
+          assert.equal(Object.hasOwn(data, key), false);
+        }
+        assert.equal(Object.hasOwn(data, 'accountingSettings'), false);
+      },
+    );
+  });
+
   test('sends company, address, dates, price, vat, notes, and payment', async () => {
     const doklado = client();
     const input = {
