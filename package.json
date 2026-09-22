@@ -9,6 +9,7 @@
   "scripts": {
     "prepare": "lefthook install || true",
     "build": "vite build",
+    "test": "node --test test/*.test.ts test/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
