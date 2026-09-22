@@ -128,6 +128,7 @@ describe('packed package', () => {
       'eslint',
       'lefthook',
       'prettier',
+      '@martindzejky/doklado-mock',
     ]) {
       assert.equal(
         existsSync(join(consumer, 'node_modules', name)),

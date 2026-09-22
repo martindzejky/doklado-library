@@ -198,7 +198,7 @@ async function waitForRequests(
 
 describe('doklado-mock integration', { concurrency: false }, () => {
   before(async () => {
-    mock = await startMock(root);
+    mock = await startMock();
     assert.equal(mock.baseUrl.startsWith('http://127.0.0.1:'), true);
   });
 

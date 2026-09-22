@@ -1,7 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { isRecord } from '../src/record.ts';
 
 export const MOCK_VERSION = '1.0.1';
@@ -11,86 +12,28 @@ export type RunningMock = {
   stop: () => Promise<void>;
 };
 
-function readInstalledVersion(prefix: string): string | undefined {
-  const packagePath = join(
-    prefix,
-    'node_modules',
-    '@martindzejky',
-    'doklado-mock',
-    'package.json',
+const require = createRequire(import.meta.url);
+
+function installedMock(): { root: string; bin: string } {
+  const root = dirname(
+    require.resolve('@martindzejky/doklado-mock/package.json'),
+  );
+  const parsed: unknown = JSON.parse(
+    readFileSync(join(root, 'package.json'), 'utf8'),
   );
 
-  if (!existsSync(packagePath)) {
-    return undefined;
+  if (!isRecord(parsed) || parsed.version !== MOCK_VERSION) {
+    const found =
+      isRecord(parsed) && typeof parsed.version === 'string'
+        ? parsed.version
+        : 'nothing';
+    throw new Error(`Expected doklado-mock ${MOCK_VERSION}, found ${found}.`);
   }
 
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(readFileSync(packagePath, 'utf8'));
-  } catch {
-    return undefined;
-  }
-
-  if (!isRecord(parsed) || typeof parsed.version !== 'string') {
-    return undefined;
-  }
-
-  return parsed.version;
-}
-
-function installMock(prefix: string): Promise<void> {
-  mkdirSync(prefix, { recursive: true });
-  const manifest = join(prefix, 'package.json');
-  if (!existsSync(manifest)) {
-    writeFileSync(manifest, '{"private":true}\n');
-  }
-
-  if (readInstalledVersion(prefix) === MOCK_VERSION) {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve, reject) => {
-    const child = spawn(
-      'npm',
-      [
-        'install',
-        '--prefix',
-        prefix,
-        '--omit=dev',
-        '--ignore-scripts',
-        '--no-package-lock',
-        `@martindzejky/doklado-mock@${MOCK_VERSION}`,
-      ],
-      {
-        env: process.env,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
-    let stderr = '';
-    child.stderr.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString('utf8');
-    });
-    child.on('error', reject);
-    child.on('close', (status) => {
-      if (status !== 0) {
-        reject(new Error(`Could not install doklado-mock. ${stderr}`));
-        return;
-      }
-
-      const installed = readInstalledVersion(prefix);
-      if (installed !== MOCK_VERSION) {
-        reject(
-          new Error(
-            `Expected doklado-mock ${MOCK_VERSION}, found ${installed ?? 'nothing'}.`,
-          ),
-        );
-        return;
-      }
-
-      resolve();
-    });
-  });
+  return {
+    root,
+    bin: join(root, 'bin', 'doklado-mock.js'),
+  };
 }
 
 function freePort(): Promise<number> {
@@ -150,20 +93,10 @@ async function waitUntilReady(
   throw new Error(`doklado-mock did not start. ${lastError}. ${stderr()}`);
 }
 
-export async function startMock(rootDir: string): Promise<RunningMock> {
-  const prefix = join(rootDir, 'tmp', 'doklado-mock-runtime');
-  await installMock(prefix);
-
+export async function startMock(): Promise<RunningMock> {
+  const mock = installedMock();
   const port = await freePort();
   const baseUrl = `http://127.0.0.1:${port}`;
-  const bin = join(
-    prefix,
-    'node_modules',
-    '@martindzejky',
-    'doklado-mock',
-    'bin',
-    'doklado-mock.js',
-  );
   const env = { ...process.env };
   delete env.DOKLADO_MOCK_CONFIG;
   delete env.PORT;
@@ -171,9 +104,9 @@ export async function startMock(rootDir: string): Promise<RunningMock> {
 
   const child = spawn(
     process.execPath,
-    [bin, '--host', '127.0.0.1', '--port', String(port)],
+    [mock.bin, '--host', '127.0.0.1', '--port', String(port)],
     {
-      cwd: prefix,
+      cwd: mock.root,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
     },
