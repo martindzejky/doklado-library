@@ -1,8 +1,6 @@
-import { readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Command, CommanderError, InvalidArgumentError } from 'commander';
+import packageJson from '../../package.json' with { type: 'json' };
 import { createClient } from '../index.ts';
 import { isRecord } from '../record.ts';
 import type { ClientConfig } from '../types.ts';
@@ -28,44 +26,6 @@ The SDK does not load .env files.
 Relative @file paths and the PDF --path are resolved from the working
 directory. PDF bytes are written to that file and are not printed.
 `;
-
-function readPackageVersion(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    join(here, '..', 'package.json'),
-    join(here, '..', '..', 'package.json'),
-  ];
-
-  for (const candidate of candidates) {
-    let text: string;
-
-    try {
-      text = readFileSync(candidate, 'utf8');
-    } catch {
-      continue;
-    }
-
-    let parsed: unknown;
-
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      continue;
-    }
-
-    if (!isRecord(parsed) || parsed.name !== '@martindzejky/doklado-library') {
-      continue;
-    }
-
-    if (typeof parsed.version !== 'string' || parsed.version.length === 0) {
-      continue;
-    }
-
-    return parsed.version;
-  }
-
-  throw new Error('Could not read the doklado package version.');
-}
 
 function parseOutput(value: string): OutputFormat {
   if (value === 'text' || value === 'json') {
@@ -153,7 +113,7 @@ function buildProgram(): Command {
   program
     .name('doklado')
     .description('Issue Doklado invoices and download their PDFs.')
-    .version(readPackageVersion(), '-v, --version', 'Print the version.')
+    .version(packageJson.version, '-v, --version', 'Print the version.')
     .showHelpAfterError()
     .exitOverride()
     .addHelpText('after', HELP);
