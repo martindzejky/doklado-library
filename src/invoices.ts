@@ -96,7 +96,7 @@ function decodeBase64(value: string): Uint8Array | undefined {
     return undefined;
   }
 
-  return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  return new Uint8Array(buffer);
 }
 
 function startsWithPdf(bytes: Uint8Array): boolean {

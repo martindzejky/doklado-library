@@ -556,6 +556,8 @@ describe('invoices.downloadPdf', () => {
         assert.equal(result.contentType, 'application/pdf');
         assert.equal(result.encoding, 'base64');
         assert.deepEqual(result.data, new Uint8Array(bytes));
+        assert.equal(result.data.byteOffset, 0);
+        assert.equal(result.data.buffer.byteLength, result.data.byteLength);
       },
     );
   });
