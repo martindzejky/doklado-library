@@ -10,6 +10,7 @@ import {
   TimeoutError,
   createClient,
 } from '../src/index.ts';
+import { isRecord } from '../src/record.ts';
 import {
   apiKey,
   assertSinglePost,
@@ -64,7 +65,7 @@ function privateInvoice() {
       name: 'Ada Lovelace',
       nonCorporateEntity: true,
       country: 'Slovensko',
-      countryCode: 'SK',
+      countryCode: 'sk',
     },
     items: [
       {
@@ -110,7 +111,7 @@ describe('invoices.create', () => {
             name: 'Ada Lovelace',
             nonCorporateEntity: true,
             country: 'Slovensko',
-            countryCode: 'SK',
+            countryCode: 'sk',
           },
           items: [
             {
@@ -155,7 +156,7 @@ describe('invoices.create', () => {
             name: 'Ada Lovelace',
             nonCorporateEntity: true,
             country: 'Slovensko',
-            countryCode: 'SK',
+            countryCode: 'sk',
             contactEmail: 'ada@example.com',
           },
         });
@@ -167,7 +168,7 @@ describe('invoices.create', () => {
             name: 'Ada Lovelace',
             nonCorporateEntity: true,
             country: 'Slovensko',
-            countryCode: 'SK',
+            countryCode: 'sk',
             contactEmail: 'ada@example.com',
           },
           items: [
@@ -183,6 +184,93 @@ describe('invoices.create', () => {
           assert.equal(Object.hasOwn(data, key), false);
         }
         assert.equal(Object.hasOwn(data, 'accountingSettings'), false);
+      },
+    );
+  });
+
+  test('rejects uppercase country codes before any request', async () => {
+    const doklado = client();
+
+    for (const countryCode of ['SK', 'Sk']) {
+      await withFetch(
+        () => {
+          throw new Error(`network used for ${countryCode}`);
+        },
+        async (calls) => {
+          const error = await rejected(() =>
+            doklado.invoices.create({
+              ...privateInvoice(),
+              customer: {
+                ...privateInvoice().customer,
+                countryCode,
+              },
+            }),
+          );
+          assert.ok(error instanceof InputError, countryCode);
+          assert.equal(error.uncertain, false, countryCode);
+          assert.match(error.message, /lowercase/, countryCode);
+          assert.match(error.message, /"sk"/, countryCode);
+          assert.equal(calls.length, 0, countryCode);
+        },
+      );
+    }
+  });
+
+  test('sends lowercase country codes unchanged', async () => {
+    const doklado = client();
+
+    for (const countryCode of ['sk', 'other']) {
+      await withFetch(
+        () => jsonResponse(200, issued()),
+        async (calls) => {
+          await doklado.invoices.create({
+            ...privateInvoice(),
+            customer: {
+              ...privateInvoice().customer,
+              countryCode,
+            },
+          });
+          const data = requestData(assertSinglePost(calls, issueUrl));
+          assert.ok(isRecord(data.customer));
+          assert.equal(data.customer.countryCode, countryCode);
+        },
+      );
+    }
+  });
+
+  test('leaves omitted and null country codes unchanged', async () => {
+    const doklado = client();
+
+    await withFetch(
+      () => jsonResponse(200, issued()),
+      async (calls) => {
+        await doklado.invoices.create({
+          type: 'issued_invoice',
+          customer: {
+            name: 'Ada Lovelace',
+            nonCorporateEntity: true,
+          },
+          items: privateInvoice().items,
+        });
+        const data = requestData(assertSinglePost(calls, issueUrl));
+        assert.ok(isRecord(data.customer));
+        assert.equal(Object.hasOwn(data.customer, 'countryCode'), false);
+      },
+    );
+
+    await withFetch(
+      () => jsonResponse(200, issued()),
+      async (calls) => {
+        await doklado.invoices.create({
+          ...privateInvoice(),
+          customer: {
+            ...privateInvoice().customer,
+            countryCode: null,
+          },
+        });
+        const data = requestData(assertSinglePost(calls, issueUrl));
+        assert.ok(isRecord(data.customer));
+        assert.equal(data.customer.countryCode, null);
       },
     );
   });
@@ -207,7 +295,7 @@ describe('invoices.create', () => {
         postalCode: '81101',
         municipality: 'Bratislava',
         country: 'Slovensko',
-        countryCode: 'SK',
+        countryCode: 'sk',
         registerNumberText: 'Oddiel Sro',
         vatRegistrationType: 'standard',
       },
@@ -386,6 +474,31 @@ describe('invoices.create', () => {
             properties: {
               organizationId: {
                 errors: ['Invalid input: expected string, received undefined'],
+              },
+            },
+          },
+        },
+        kind: 'api' as const,
+        code: 'APP_INCORRECT_INPUT_DATA',
+      },
+      {
+        status: 200,
+        body: {
+          success: false,
+          code: 'APP_INCORRECT_INPUT_DATA',
+          data: {
+            errors: [],
+            properties: {
+              customer: {
+                errors: [],
+                properties: {
+                  countryCode: {
+                    errors: [
+                      'Invalid option: expected one of "sk"|"cz"',
+                      'Invalid input: expected "other"',
+                    ],
+                  },
+                },
               },
             },
           },

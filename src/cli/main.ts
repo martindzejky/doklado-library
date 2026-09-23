@@ -23,6 +23,9 @@ The doklado command loads .env from the working directory. Variables
 already set in the environment win over that file. Flags win over both.
 The SDK does not load .env files.
 
+customer.countryCode must be lowercase, for example "sk", or the literal
+"other".
+
 Relative @file paths and the PDF --path are resolved from the working
 directory. PDF bytes are written to that file and are not printed.
 `;

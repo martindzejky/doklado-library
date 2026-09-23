@@ -36,6 +36,7 @@ const created = await doklado.invoices.create({
     name: 'Ada Lovelace',
     nonCorporateEntity: true,
     contactEmail: 'ada@example.com',
+    countryCode: 'sk',
   },
   items: [
     {
@@ -67,6 +68,8 @@ doklado invoices create --data @invoice.json
 doklado invoices create --data -
 doklado invoices pdf AbCdEfGhIjKlMnOpQrSt --path invoice.pdf
 ```
+
+`customer.countryCode` in that JSON must be lowercase, for example `sk`, or the literal `other`.
 
 `--data` is inline JSON, `@` plus a file path, or `-` to read stdin. The document id for `invoices pdf` is positional. `--path` is required. The PDF is written to that file and is not printed.
 
@@ -114,6 +117,8 @@ See `.env.example` for the variable names.
 
 `paymentType: "transfer"` requires `paymentInfo.iban`. `customer.contactEmail` is the address you keep for sending the PDF yourself. This client does not send email.
 
+`customer.countryCode` must be lowercase, for example `sk`, or the literal `other`. Uppercase is rejected before a request is sent. Omitting the field, or sending `null`, is left unchanged.
+
 ## Errors
 
 Failures throw.
@@ -143,7 +148,7 @@ PDF download is a separate call. If it fails, call `invoices.downloadPdf` again 
 Run the mock and point the client at it. Do not use your production key.
 
 ```sh
-npx @martindzejky/doklado-mock@1.0.1
+npx @martindzejky/doklado-mock@1.0.2
 ```
 
 The example config shipped with the mock listens on `http://127.0.0.1:3000`, accepts `test-api-key`, and uses organisation id `12345678`.
