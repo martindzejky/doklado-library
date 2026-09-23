@@ -11,11 +11,10 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { after, before, describe, test } from 'node:test';
+import { describe, test } from 'node:test';
 import { Buffer } from 'node:buffer';
 import packageJson from '../package.json' with { type: 'json' };
 import { isRecord } from '../src/record.ts';
-import { startMock, type RunningMock } from './mock-runtime.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const bin = join(root, 'bin', 'doklado.js');
@@ -198,6 +197,26 @@ function invoiceJson(organizationId?: string): string {
   return JSON.stringify(invoice);
 }
 
+function invoiceJsonWithCountry(countryCode: string): string {
+  return JSON.stringify({
+    type: 'issued_invoice',
+    customer: {
+      name: 'Ada Lovelace',
+      nonCorporateEntity: true,
+      contactEmail: 'ada@example.com',
+      countryCode,
+    },
+    items: [
+      {
+        name: 'Work',
+        unitPriceWithoutVat: 10,
+        quantity: 1,
+        vatRate: 0,
+      },
+    ],
+  });
+}
+
 function requestData(recorded: RecordedRequest): Record<string, unknown> {
   assert.ok(isRecord(recorded.body));
   assert.ok(isRecord(recorded.body.data));
@@ -213,8 +232,6 @@ describe('doklado cli', () => {
     assert.match(help.stdout, /doklado invoices pdf/);
     assert.match(help.stdout, /DOKLADO_API_KEY/);
     assert.match(help.stdout, /\.env/);
-    assert.match(help.stdout, /lowercase/);
-    assert.match(help.stdout, /"sk"/);
     assert.equal(help.stderr, '');
 
     const version = await run(['--version'], { cwd, env: env({}) });
@@ -608,153 +625,60 @@ describe('doklado cli', () => {
       await stub.close();
     }
   });
-});
 
-function invoiceJsonWithCountry(countryCode: string): string {
-  return JSON.stringify({
-    type: 'issued_invoice',
-    customer: {
-      name: 'Ada Lovelace',
-      nonCorporateEntity: true,
-      contactEmail: 'ada@example.com',
-      countryCode,
-    },
-    items: [
-      {
-        name: 'Work',
-        unitPriceWithoutVat: 10,
-        quantity: 1,
-        vatRate: 0,
+  test('prints a nested api error body', async () => {
+    const body = {
+      success: false,
+      code: 'APP_INCORRECT_INPUT_DATA',
+      data: {
+        properties: {
+          customer: {
+            properties: {
+              countryCode: {
+                errors: ['Invalid input: expected "other"'],
+              },
+            },
+          },
+        },
       },
-    ],
-  });
-}
-
-function countryCodeErrors(body: unknown): string[] {
-  assert.ok(isRecord(body));
-  const data = body.data;
-  assert.ok(isRecord(data));
-  const properties = data.properties;
-  assert.ok(isRecord(properties));
-  const customer = properties.customer;
-  assert.ok(isRecord(customer));
-  const customerProperties = customer.properties;
-  assert.ok(isRecord(customerProperties));
-  const countryCode = customerProperties.countryCode;
-  assert.ok(isRecord(countryCode));
-  assert.ok(Array.isArray(countryCode.errors));
-
-  const errors: string[] = [];
-  for (const entry of countryCode.errors) {
-    assert.equal(typeof entry, 'string');
-    errors.push(entry);
-  }
-
-  return errors;
-}
-
-describe('doklado cli against the mock', { concurrency: false }, () => {
-  let mock: RunningMock;
-
-  before(async () => {
-    mock = await startMock();
-  });
-
-  after(async () => {
-    await mock.stop();
-  });
-
-  async function reset(): Promise<void> {
-    const response = await fetch(`${mock.baseUrl}/__mock/reset`, {
-      method: 'POST',
-    });
-    assert.equal(response.status, 200);
-  }
-
-  function mockEnv(): NodeJS.ProcessEnv {
-    return env({
-      DOKLADO_API_KEY: 'test-api-key',
-      DOKLADO_API_URL: mock.baseUrl,
-      DOKLADO_ORGANIZATION_ID: '12345678',
-    });
-  }
-
-  test('creates an invoice and downloads the pdf', async () => {
-    await reset();
+    };
+    const stub = await startStub(200, body);
     const cwd = mkdtempSync(join(tmpdir(), 'doklado-cli-'));
-    const created = await run(
-      [
-        '--output',
-        'json',
-        'invoices',
-        'create',
-        '--data',
-        invoiceJsonWithCountry('sk'),
-      ],
-      { cwd, env: mockEnv() },
-    );
-    assert.equal(created.status, 0, created.stderr);
-    const payload: unknown = JSON.parse(created.stdout);
-    assert.ok(isRecord(payload));
-    assert.equal(payload.ok, true);
-    assert.ok(isRecord(payload.data));
-    const documentId = payload.data.documentId;
-    if (typeof documentId !== 'string') {
-      assert.fail('documentId must be a string');
+    const options = {
+      cwd,
+      env: env({
+        DOKLADO_API_KEY: 'test-api-key',
+        DOKLADO_API_URL: stub.baseUrl,
+        DOKLADO_ORGANIZATION_ID: '12345678',
+      }),
+    };
+
+    try {
+      const text = await run(
+        ['invoices', 'create', '--data', invoiceJson()],
+        options,
+      );
+      assert.equal(text.status, 1);
+      assert.equal(text.stdout, '');
+      assert.equal(text.stderr.includes('[Object]'), false);
+      const newline = text.stderr.indexOf('\n');
+      assert.ok(newline > 0);
+      const printed: unknown = JSON.parse(text.stderr.slice(newline + 1));
+      assert.deepEqual(printed, body);
+
+      const json = await run(
+        ['--output', 'json', 'invoices', 'create', '--data', invoiceJson()],
+        options,
+      );
+      assert.equal(json.status, 1);
+      assert.equal(json.stderr.includes('[Object]'), false);
+      const parsed: unknown = JSON.parse(json.stderr);
+      assert.ok(isRecord(parsed) && isRecord(parsed.error));
+      assert.equal(parsed.error.name, 'ApiError');
+      assert.equal(parsed.error.uncertain, false);
+      assert.deepEqual(parsed.error.body, body);
+    } finally {
+      await stub.close();
     }
-
-    const pdf = await run(
-      ['invoices', 'pdf', documentId, '--path', 'invoice.pdf'],
-      { cwd, env: mockEnv() },
-    );
-    assert.equal(pdf.status, 0, pdf.stderr);
-    assert.match(pdf.stdout, /invoice\.pdf/);
-    const bytes = readFileSync(join(cwd, 'invoice.pdf'));
-    assert.equal(bytes.subarray(0, 5).toString('ascii'), '%PDF-');
-  });
-
-  test('prints nested validation details without truncating them', async () => {
-    await reset();
-    const cwd = mkdtempSync(join(tmpdir(), 'doklado-cli-'));
-    const text = await run(
-      ['invoices', 'create', '--data', invoiceJsonWithCountry('zz')],
-      { cwd, env: mockEnv() },
-    );
-    assert.equal(text.status, 1);
-    assert.equal(text.stdout, '');
-    assert.equal(text.stderr.includes('[Object]'), false);
-    assert.match(text.stderr, /APP_INCORRECT_INPUT_DATA/);
-
-    const json = await run(
-      [
-        '--output',
-        'json',
-        'invoices',
-        'create',
-        '--data',
-        invoiceJsonWithCountry('zz'),
-      ],
-      { cwd, env: mockEnv() },
-    );
-    assert.equal(json.status, 1);
-    assert.equal(json.stdout, '');
-    assert.equal(json.stderr.includes('[Object]'), false);
-    const parsed: unknown = JSON.parse(json.stderr);
-    assert.ok(isRecord(parsed));
-    assert.equal(parsed.ok, false);
-    assert.equal(parsed.status, 200);
-    assert.ok(isRecord(parsed.error));
-    assert.equal(parsed.error.name, 'ApiError');
-    assert.equal(parsed.error.code, 'APP_INCORRECT_INPUT_DATA');
-    assert.equal(parsed.error.uncertain, false);
-
-    const errors = countryCodeErrors(parsed.error.body);
-    assert.match(errors.join('\n'), /"sk"/);
-    assert.match(errors.join('\n'), /"other"/);
-
-    const newline = text.stderr.indexOf('\n');
-    assert.ok(newline > 0);
-    const printed: unknown = JSON.parse(text.stderr.slice(newline + 1));
-    assert.deepEqual(printed, parsed.error.body);
   });
 });

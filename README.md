@@ -69,8 +69,6 @@ doklado invoices create --data -
 doklado invoices pdf AbCdEfGhIjKlMnOpQrSt --path invoice.pdf
 ```
 
-`customer.countryCode` in that JSON must be lowercase, for example `sk`, or the literal `other`.
-
 `--data` is inline JSON, `@` plus a file path, or `-` to read stdin. The document id for `invoices pdf` is positional. `--path` is required. The PDF is written to that file and is not printed.
 
 `--output text` is the default. `--output json` prints one JSON object on stdout. Failures go to stderr and the process exits with status 1.

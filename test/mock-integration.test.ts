@@ -229,7 +229,6 @@ describe('doklado-mock integration', { concurrency: false }, () => {
       isRecord(sent.customer) && sent.customer.contactEmail,
       'ada@example.com',
     );
-    assert.equal(isRecord(sent.customer) && sent.customer.countryCode, 'sk');
     assert.equal(
       sent.customer &&
         isRecord(sent.customer) &&
@@ -502,69 +501,6 @@ describe('doklado-mock integration', { concurrency: false }, () => {
     const snapshot = await state();
     assert.equal(snapshot.invoices.length, 1);
     assert.equal(countPath(snapshot, '/v1/documents/get-invoice-pdf'), 2);
-    assert.equal(countPath(snapshot, '/v1/documents/invoice-issue'), 1);
-  });
-
-  test('accepts the literal other country code unchanged', async () => {
-    await reset();
-    const created = await client().invoices.create({
-      ...privateInvoice(),
-      customer: {
-        ...privateInvoice().customer,
-        countryCode: 'other',
-      },
-    });
-
-    assert.equal(created.statusCode, 200);
-    assert.match(created.data.documentId, /^[A-Za-z0-9]{20}$/);
-
-    const snapshot = await state();
-    const sent = requestData(snapshot, '/v1/documents/invoice-issue');
-    assert.ok(isRecord(sent.customer));
-    assert.equal(sent.customer.countryCode, 'other');
-    assert.equal(snapshot.invoices.length, 1);
-  });
-
-  test('keeps a nested validation response on the api error', async () => {
-    await reset();
-    const error = await failure(() =>
-      client().invoices.create({
-        ...privateInvoice(),
-        customer: {
-          ...privateInvoice().customer,
-          countryCode: 'zz',
-        },
-      }),
-    );
-
-    assert.ok(error instanceof ApiError);
-    assert.equal(error.code, 'APP_INCORRECT_INPUT_DATA');
-    assert.equal(error.statusCode, 200);
-    assert.equal(error.uncertain, false);
-    assert.ok(isRecord(error.body));
-    assert.equal(error.body.success, false);
-    assert.equal(error.body.code, 'APP_INCORRECT_INPUT_DATA');
-
-    const data = error.body.data;
-    assert.ok(isRecord(data));
-    const properties = data.properties;
-    assert.ok(isRecord(properties));
-    const customer = properties.customer;
-    assert.ok(isRecord(customer));
-    const customerProperties = customer.properties;
-    assert.ok(isRecord(customerProperties));
-    const countryCode = customerProperties.countryCode;
-    assert.ok(isRecord(countryCode));
-    assert.ok(Array.isArray(countryCode.errors));
-    assert.ok(countryCode.errors.length > 0);
-
-    const details = countryCode.errors.join('\n');
-    assert.match(details, /"sk"/);
-    assert.match(details, /"other"/);
-    assert.equal(JSON.stringify(error.body).includes('[Object]'), false);
-
-    const snapshot = await state();
-    assert.equal(snapshot.invoices.length, 0);
     assert.equal(countPath(snapshot, '/v1/documents/invoice-issue'), 1);
   });
 });

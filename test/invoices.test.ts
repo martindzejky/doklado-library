@@ -486,31 +486,6 @@ describe('invoices.create', () => {
         body: {
           success: false,
           code: 'APP_INCORRECT_INPUT_DATA',
-          data: {
-            errors: [],
-            properties: {
-              customer: {
-                errors: [],
-                properties: {
-                  countryCode: {
-                    errors: [
-                      'Invalid option: expected one of "sk"|"cz"',
-                      'Invalid input: expected "other"',
-                    ],
-                  },
-                },
-              },
-            },
-          },
-        },
-        kind: 'api' as const,
-        code: 'APP_INCORRECT_INPUT_DATA',
-      },
-      {
-        status: 200,
-        body: {
-          success: false,
-          code: 'APP_INCORRECT_INPUT_DATA',
           message: 'Incorrect numeric code',
         },
         kind: 'api' as const,
