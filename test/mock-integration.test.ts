@@ -41,7 +41,7 @@ function privateInvoice(): CreateInvoiceInput {
       name: 'Ada Lovelace',
       nonCorporateEntity: true,
       country: 'Slovensko',
-      countryCode: 'SK',
+      countryCode: 'sk',
       contactEmail: 'ada@example.com',
     },
     items: [
@@ -257,7 +257,7 @@ describe('doklado-mock integration', { concurrency: false }, () => {
         postalCode: '81101',
         municipality: 'Bratislava',
         country: 'Slovensko',
-        countryCode: 'SK',
+        countryCode: 'sk',
         registerNumberText: 'Oddiel Sro',
         vatRegistrationType: 'standard',
         contactEmail: 'buyer@example.com',

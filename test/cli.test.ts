@@ -197,6 +197,26 @@ function invoiceJson(organizationId?: string): string {
   return JSON.stringify(invoice);
 }
 
+function invoiceJsonWithCountry(countryCode: string): string {
+  return JSON.stringify({
+    type: 'issued_invoice',
+    customer: {
+      name: 'Ada Lovelace',
+      nonCorporateEntity: true,
+      contactEmail: 'ada@example.com',
+      countryCode,
+    },
+    items: [
+      {
+        name: 'Work',
+        unitPriceWithoutVat: 10,
+        quantity: 1,
+        vatRate: 0,
+      },
+    ],
+  });
+}
+
 function requestData(recorded: RecordedRequest): Record<string, unknown> {
   assert.ok(isRecord(recorded.body));
   assert.ok(isRecord(recorded.body.data));
@@ -572,6 +592,91 @@ describe('doklado cli', () => {
       assert.equal(invalid.error.name, 'InputError');
       assert.match(String(invalid.error.message), /quantity/);
       assert.equal(stub.requests.length, requestCount);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  test('rejects uppercase country codes before any request', async () => {
+    const stub = await startStub();
+    const cwd = mkdtempSync(join(tmpdir(), 'doklado-cli-'));
+
+    try {
+      for (const countryCode of ['SK', 'Sk']) {
+        const result = await run(
+          ['invoices', 'create', '--data', invoiceJsonWithCountry(countryCode)],
+          {
+            cwd,
+            env: env({
+              DOKLADO_API_KEY: 'test-api-key',
+              DOKLADO_API_URL: stub.baseUrl,
+              DOKLADO_ORGANIZATION_ID: '12345678',
+            }),
+          },
+        );
+        assert.equal(result.status, 1, countryCode);
+        assert.equal(result.stdout, '', countryCode);
+        assert.match(result.stderr, /lowercase/, countryCode);
+        assert.match(result.stderr, /"sk"/, countryCode);
+      }
+
+      assert.equal(stub.requests.length, 0);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  test('prints a nested api error body', async () => {
+    const body = {
+      success: false,
+      code: 'APP_INCORRECT_INPUT_DATA',
+      data: {
+        properties: {
+          customer: {
+            properties: {
+              countryCode: {
+                errors: ['Invalid input: expected "other"'],
+              },
+            },
+          },
+        },
+      },
+    };
+    const stub = await startStub(200, body);
+    const cwd = mkdtempSync(join(tmpdir(), 'doklado-cli-'));
+    const options = {
+      cwd,
+      env: env({
+        DOKLADO_API_KEY: 'test-api-key',
+        DOKLADO_API_URL: stub.baseUrl,
+        DOKLADO_ORGANIZATION_ID: '12345678',
+      }),
+    };
+
+    try {
+      const text = await run(
+        ['invoices', 'create', '--data', invoiceJson()],
+        options,
+      );
+      assert.equal(text.status, 1);
+      assert.equal(text.stdout, '');
+      assert.equal(text.stderr.includes('[Object]'), false);
+      const newline = text.stderr.indexOf('\n');
+      assert.ok(newline > 0);
+      const printed: unknown = JSON.parse(text.stderr.slice(newline + 1));
+      assert.deepEqual(printed, body);
+
+      const json = await run(
+        ['--output', 'json', 'invoices', 'create', '--data', invoiceJson()],
+        options,
+      );
+      assert.equal(json.status, 1);
+      assert.equal(json.stderr.includes('[Object]'), false);
+      const parsed: unknown = JSON.parse(json.stderr);
+      assert.ok(isRecord(parsed) && isRecord(parsed.error));
+      assert.equal(parsed.error.name, 'ApiError');
+      assert.equal(parsed.error.uncertain, false);
+      assert.deepEqual(parsed.error.body, body);
     } finally {
       await stub.close();
     }

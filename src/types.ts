@@ -49,6 +49,7 @@ export type InvoiceCustomer = {
   postalCode?: string | null;
   municipality?: string | null;
   country?: string | null;
+  /** Lowercase country code, for example "sk", or the literal "other". */
   countryCode?: string | null;
   registerNumberText?: string | null;
   vatRegistrationType?: string | null;

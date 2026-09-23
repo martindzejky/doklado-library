@@ -157,6 +157,22 @@ function requireNumber(value: unknown, label: string): number {
   return value;
 }
 
+function rejectUppercaseCountryCode(
+  countryCode: string | null | undefined,
+): void {
+  if (typeof countryCode !== 'string') {
+    return;
+  }
+
+  if (countryCode === countryCode.toLowerCase()) {
+    return;
+  }
+
+  throw new InputError(
+    'customer.countryCode must be lowercase. Doklado requires lowercase country codes, for example "sk".',
+  );
+}
+
 function buildCustomer(value: unknown): InvoiceCustomer {
   if (!isRecord(value)) {
     throw new InputError('customer must be an object.');
@@ -171,6 +187,8 @@ function buildCustomer(value: unknown): InvoiceCustomer {
   for (const key of CUSTOMER_BOOLEAN_FIELDS) {
     put(customer, key, optionalBoolean(value, key, `customer.${key}`));
   }
+
+  rejectUppercaseCountryCode(customer.countryCode);
 
   return customer;
 }
